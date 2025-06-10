@@ -1,13 +1,10 @@
 # Cursor Usage Enhancer
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.2.1-brightgreen.svg)](https://github.com/Elevate-Code/cursor-usage-costs-userscript/releases)
 
-A simple Tampermonkey userscript that supercharges the [Cursor](https://cursor.com) usage dashboard with essential cost-tracking features.
+A simple Tampermonkey userscript that supercharges the [Cursor](https://cursor.com) Usage dashboard with essential cost-tracking features.
 
-![Cursor Usage Enhancer Demo](https://github.com/Elevate-Code/cursor-usage-costs-userscript/blob/main/demo.gif?raw=true)
-
----
+![Cursor Usage Enhancer Demo](demo.gif)
 
 ## Features
 
@@ -17,12 +14,10 @@ A simple Tampermonkey userscript that supercharges the [Cursor](https://cursor.c
 
 ## Installation
 
-1.  Get a userscript manager. The most popular one is [**Tampermonkey**](https://www.tampermonkey.net/) (available for Chrome, Firefox, Safari, and Edge).
-2.  Click the link below to install the script:
-
-    [**>> Install Cursor Usage Enhancer <<**](https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/main/cursor-usage.js)
-
+1.  Get a userscript manager. A popular one is [**Tampermonkey**](https://www.tampermonkey.net/) (available for Chrome, Firefox, Safari, and Edge).
+2.  Click the link below to install the script: [**>> Install Cursor Usage Enhancer <<**](https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/master/cursor-usage.user.js)
 3.  Your userscript manager will open and ask you to confirm the installation. Just click "Install" and refresh the Usage page. The script will automatically run when you visit the Cursor dashboard.
+4.  Fallback: If the link doesn't prompt an install, copy the script's code, open the Tampermonkey dashboard, create a new script, paste the code in and save it.
 
 ## Development & Issues
 
