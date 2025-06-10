@@ -1,0 +1,18 @@
+{
+    "agent_rules": "When updating, first check for an existing entry with the same category and today's date. If one is found, append new changes to its 'changes' array. Otherwise, create a new object at the top of the 'changelog' array. Each object requires a 'category', a 'date' (YYYY-MM-DD), and a 'changes' array with descriptive, full-sentence strings. Use 'General' category for project-wide or uncategorized changes.",
+    "categories": ["cursor-com"],
+    "changelog": [
+      {
+        "category": "cursor-com",
+        "date": "2024-06-10",
+        "changes": [
+          "Fixed a timezone display issue in the hourly usage chart to correctly show local time.",
+          "Added a dynamic summary line to display the total cost and date range for the visible table entries.",
+          "Refactored and optimized the userscript for improved performance, and cleaned up verbose console logs.",
+          "Enhanced script resiliency with error handling and a text-based fallback for the usage chart.",
+          "Improved code clarity and maintainability by adding comprehensive JSDoc comments.",
+          "Finalized the script for public release, updating versioning and adding automatic update placeholders."
+        ]
+      }
+    ]
+  }
