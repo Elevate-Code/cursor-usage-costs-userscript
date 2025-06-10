@@ -4,6 +4,10 @@
 
 A simple Tampermonkey userscript that supercharges the [Cursor](https://cursor.com) Usage dashboard with essential cost-tracking features.
 
+![Screenshot](screenshot.png)
+
+Before and after:
+
 ![Cursor Usage Enhancer Demo](demo.gif)
 
 ## Features
@@ -27,5 +31,4 @@ Found a bug or have a feature request? Please [open an issue](https://github.com
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
----
-_A project by [Elevate Code](https://github.com/Elevate-Code)._
+_A project by [Elevate Code](https://elevatecode.io)._
