@@ -2,7 +2,7 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A simple Tampermonkey userscript that supercharges the [Cursor](https://cursor.com) Usage dashboard with essential cost-tracking features.
+A simple Tampermonkey userscript that supercharges the Cursor [Usage dashboard](https://www.cursor.com/dashboard?tab=usage) with essential cost-tracking and value-analysis features.
 
 ![Screenshot](screenshot.png)
 
@@ -12,9 +12,8 @@ Before and after:
 
 ## Features
 
--   **Visible Cost Column:** Unhides the cost for each usage event and displays it in a clean "Cost ($)" column, so you don't have to hover over tooltips to see it.
--   **Interactive Hourly Chart:** Adds an interactive chart that visualizes your usage costs by the hour, helping you spot spending patterns instantly.
--   **Dynamic Summary:** Provides a clear summary line that shows the total cost and date/time range for the usage events currently visible in the table.
+-   **Cost-Value Analysis Chart:** Adds an interactive chart that visualizes both your usage-based "overage" costs and the "included" value you're getting from your Pro plan, helping you understand your spending and subscription value at a glance.
+-   **Detailed Cost Summary:** Provides a clear summary line showing total overage costs and included value for the currently visible date range.
 
 ## Installation
 

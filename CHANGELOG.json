@@ -4,6 +4,14 @@
     "changelog": [
       {
         "category": "general",
+        "date": "2024-07-04",
+        "changes": [
+          "Adapted the script to recent breaking changes in the Cursor dashboard UI, ensuring compatibility with the new layout and cost column.",
+          "Enhanced the usage chart and summary to display a detailed breakdown of 'Included' value versus 'Overage' costs, providing deeper usage insights."
+        ]
+      },
+      {
+        "category": "general",
         "date": "2024-06-10",
         "changes": [
           "Fixed a timezone display issue in the hourly usage chart to correctly show local time.",

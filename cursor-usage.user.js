@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name         Cursor Usage Costs
 // @namespace    https://github.com/Elevate-Code
-// @version      1.2.2
+// @version      1.2.5
 // @description  Adds a 'Cost ($)' column, a total cost summary, and a resilient hourly usage chart (with text fallback) to the Cursor usage page.
 // @author       Elevate Code (Dimitri Sudomoin)
 // @match        https://www.cursor.com/dashboard*
+// @match        https://cursor.com/dashboard*
 // @homepageURL  https://github.com/Elevate-Code/cursor-usage-costs-userscript
 // @supportURL   https://github.com/Elevate-Code/cursor-usage-costs-userscript/issues
 // @require      https://code.highcharts.com/highcharts.js
-// @downloadURL  https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/main/cursor-usage.js
-// @updateURL    https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/main/cursor-usage.js
+// @downloadURL  https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/main/cursor-usage.user.js
+// @updateURL    https://raw.githubusercontent.com/Elevate-Code/cursor-usage-costs-userscript/main/cursor-usage.user.js
 // @grant        none
 // ==/UserScript==
 
@@ -58,12 +59,6 @@
             const table = document.querySelector('table');
             if (!table) return;
 
-            try {
-                addCostColumn(table);
-            } catch (e) {
-                console.warn('[CUE] Could not add cost column.', e);
-            }
-
             const chartData = getChartData(table);
             if (!chartData || chartData.length === 0) {
                  if (usageChart) usageChart.destroy();
@@ -103,54 +98,41 @@
     }
 
     /**
-     * Adds a "Cost ($)" column to the usage table if it doesn't exist.
+     * Extracts time, cost, and kind data from the table.
      * @param {HTMLTableElement} table The usage table element.
-     */
-    function addCostColumn(table) {
-        const headerRow = table.querySelector('thead tr');
-        if (headerRow && !headerRow.querySelector(`th[data-${SCRIPT_ID}]`)) {
-            const newHeader = document.createElement('th');
-            newHeader.scope = 'col';
-            newHeader.className = 'px-3 py-2 font-semibold text-right';
-            newHeader.textContent = 'Cost ($)';
-            newHeader.setAttribute(`data-${SCRIPT_ID}`, 'header');
-            headerRow.appendChild(newHeader);
-        }
-
-        const rows = table.querySelectorAll(`tbody tr:not([data-${SCRIPT_ID}])`);
-        rows.forEach(row => {
-            row.setAttribute(`data-${SCRIPT_ID}`, 'processed');
-            let cost = '-';
-            const tooltip = row.querySelector('.group .absolute');
-            if (tooltip) {
-                const costElement = tooltip.querySelector('.border-t span:last-child');
-                if (costElement && costElement.textContent.startsWith('$')) {
-                    cost = costElement.textContent.substring(1);
-                }
-            }
-            const newCell = document.createElement('td');
-            newCell.className = 'px-3 py-2 text-right font-mono text-xs';
-            newCell.textContent = cost;
-            row.appendChild(newCell);
-        });
-    }
-
-    /**
-     * Extracts time and cost data from the table for the chart and summary.
-     * @param {HTMLTableElement} table The usage table element.
-     * @returns {Array<Object>} An array of data points with time and cost.
+     * @returns {Array<Object>} An array of data points with time, cost, and kind.
      */
     function getChartData(table) {
         const rows = table.querySelectorAll('tbody tr');
         const data = [];
         rows.forEach(row => {
             const dateCell = row.querySelector('td:first-child');
-            const dateTitle = dateCell ? dateCell.getAttribute('title') : null;
-            if (dateTitle) {
-                const costCell = row.querySelector(`td:last-child`);
-                const cost = costCell ? parseFloat(costCell.textContent) : 0;
+            const kindCell = row.querySelector('td:nth-child(3)');
+            const costCell = row.querySelector('td:last-child');
+
+            const dateTitle = dateCell?.getAttribute('title');
+            const kind = kindCell?.getAttribute('title');
+
+            if (dateTitle && kind && costCell) {
+                let cost = NaN;
+                const span = costCell.querySelector('span');
+                let costText;
+
+                if (span && span.title.includes('$')) {
+                    costText = span.title;
+                } else {
+                    costText = costCell.textContent;
+                }
+
+                if (costText) {
+                    const costMatch = costText.match(/\$([\d.]+)/);
+                    if (costMatch && costMatch[1]) {
+                        cost = parseFloat(costMatch[1]);
+                    }
+                }
+
                 if (!isNaN(cost)) {
-                    data.push({ time: new Date(dateTitle), cost: cost });
+                    data.push({ time: new Date(dateTitle), cost: cost, kind: kind });
                 }
             }
         });
@@ -158,29 +140,40 @@
     }
 
     /**
-     * Aggregates cost data by the hour for the chart.
+     * Aggregates cost data by the hour for the chart, separated by kind.
      * @param {Array<Object>} data The raw data from getChartData.
-     * @returns {Array<Array<number>>} Data formatted for Highcharts series.
+     * @returns {Object} An object containing aggregated data for included and usage-based costs.
      */
     function aggregateDataByHour(data) {
-        const hourlyData = {};
+        const includedHourly = {};
+        const usageBasedHourly = {};
         const dataWithCost = data.filter(item => item.cost > 0);
 
         dataWithCost.forEach(item => {
             const date = item.time;
             const hour = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours());
-            hourlyData[hour] = (hourlyData[hour] || 0) + item.cost;
+
+            if (item.kind.includes('Included')) {
+                includedHourly[hour] = (includedHourly[hour] || 0) + item.cost;
+            } else if (item.kind.includes('Usage-based')) {
+                usageBasedHourly[hour] = (usageBasedHourly[hour] || 0) + item.cost;
+            }
         });
 
-        return Object.entries(hourlyData)
+        const formatForChart = (hourlyData) => Object.entries(hourlyData)
             .map(([time, cost]) => [parseInt(time), parseFloat(cost.toFixed(2))])
             .sort((a, b) => a[0] - b[0]);
+
+        return {
+            included: formatForChart(includedHourly),
+            usageBased: formatForChart(usageBasedHourly)
+        };
     }
 
     /**
      * Returns the configuration object for the Highcharts chart.
      * @param {boolean} isDarkMode Whether dark mode is enabled.
-     * @param {Array<Array<number>>} aggregatedData The data for the chart series.
+     * @param {Object} aggregatedData The data for the chart series.
      * @returns {Object} The Highcharts options object.
      */
     function getChartOptions(isDarkMode, aggregatedData) {
@@ -203,10 +196,24 @@
                 backgroundColor: isDarkMode ? 'rgba(30, 30, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
                 style: { color: isDarkMode ? 'white' : 'black' },
                 headerFormat: '<span style="font-size: 10px">{point.key:%A, %b %e, %H:00}</span><br/>',
-                pointFormat: 'Cost: <b>${point.y:.2f}</b>'
+                pointFormat: '{series.name}: <b>${point.y:.2f}</b>',
+                shared: true
             },
-            legend: { enabled: false },
-            series: [{ name: 'Cost', data: aggregatedData, color: '#88C0D0' }],
+            legend: {
+                enabled: true,
+                itemStyle: {
+                    color: isDarkMode ? '#a0a0a0' : '#333'
+                }
+            },
+            series: [{
+                name: 'Included Cost',
+                data: aggregatedData.included,
+                color: '#88C0D0'
+            }, {
+                name: 'Overage Cost',
+                data: aggregatedData.usageBased,
+                color: '#BF616A'
+            }],
             credits: { enabled: false },
             accessibility: { enabled: false }
         };
@@ -220,7 +227,7 @@
     function renderOrUpdateUsageChart(chartData, table) {
         const aggregatedData = aggregateDataByHour(chartData);
 
-        if (aggregatedData.length === 0) {
+        if (aggregatedData.included.length === 0 && aggregatedData.usageBased.length === 0) {
             if (usageChart) {
                 usageChart.destroy();
                 usageChart = null;
@@ -231,11 +238,14 @@
 
         Highcharts.setOptions({ global: { useUTC: false } });
 
-        const newDataSignature = `${aggregatedData.length}:${aggregatedData[0]?.[0]}:${aggregatedData.at(-1)?.[0]}`;
+        const inclSig = aggregatedData.included;
+        const usageSig = aggregatedData.usageBased;
+        const newDataSignature = `${inclSig.length}:${inclSig[0]?.[0]}:${inclSig.at(-1)?.[0]}:${usageSig.length}:${usageSig[0]?.[0]}:${usageSig.at(-1)?.[0]}`;
 
         if (usageChart) {
              if (usageChart.cueDataSignature !== newDataSignature) {
-                usageChart.series[0].setData(aggregatedData, true);
+                usageChart.series[0].setData(aggregatedData.included, false);
+                usageChart.series[1].setData(aggregatedData.usageBased, true);
                 usageChart.cueDataSignature = newDataSignature;
             }
         } else {
@@ -246,8 +256,8 @@
                 container.style.height = '400px';
                 container.style.marginBottom = '20px';
                 const heading = Array.from(document.querySelectorAll('p')).find(p => p.textContent.trim() === 'Filtered Usage Events');
-                if (heading) {
-                    heading.insertAdjacentElement('afterend', container);
+                if (heading && heading.parentElement) {
+                    heading.parentElement.insertAdjacentElement('afterend', container);
                 } else {
                     table.parentNode.insertBefore(container, table);
                 }
@@ -267,21 +277,31 @@
         const aggregatedData = aggregateDataByHour(chartData);
         let fallbackEl = document.getElementById(FALLBACK_CHART_ID);
 
-        if (aggregatedData.length === 0) {
+        if (aggregatedData.included.length === 0 && aggregatedData.usageBased.length === 0) {
             if (fallbackEl) fallbackEl.remove();
             return;
         }
 
         const isDarkMode = document.documentElement.classList.contains('dark');
-        const textContent = aggregatedData.map(([time, cost]) => {
-            const d = new Date(time);
-            const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-            return `${dateStr}, ${timeStr}: $${cost.toFixed(2)}`;
-        }).join('\n');
 
-        const newSignature = `${aggregatedData.length}:${aggregatedData[0]?.[0]}`;
-        const newHtml = `<h3 style="margin: 0 0 10px; font-weight: bold; color: ${isDarkMode ? 'white' : 'black'};">Hourly Usage Cost (Fallback)</h3>${textContent}`;
+        const formatText = (data, title) => {
+            if (data.length === 0) return '';
+            const content = data.map(([time, cost]) => {
+                const d = new Date(time);
+                const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                return `${dateStr}, ${timeStr}: $${cost.toFixed(2)}`;
+            }).join('\n');
+            return `<h4 style="margin: 10px 0 5px; font-weight: bold; color: ${isDarkMode ? 'white' : 'black'};">${title}</h4>${content}`;
+        };
+
+        const includedText = formatText(aggregatedData.included, 'Included Cost');
+        const usageBasedText = formatText(aggregatedData.usageBased, 'Overage Cost');
+
+        const inclSig = aggregatedData.included;
+        const usageSig = aggregatedData.usageBased;
+        const newSignature = `${inclSig.length}:${inclSig[0]?.[0]}:${usageSig.length}:${usageSig[0]?.[0]}`;
+        const newHtml = `<h3 style="margin: 0 0 10px; font-weight: bold; color: ${isDarkMode ? 'white' : 'black'};">Hourly Usage Cost (Fallback)</h3>${includedText}${usageBasedText}`;
 
         if (fallbackEl && fallbackEl.cueDataSignature === newSignature) {
             return;
@@ -302,8 +322,8 @@
                 fontSize: '12px',
             });
             const heading = Array.from(document.querySelectorAll('p')).find(p => p.textContent.trim() === 'Filtered Usage Events');
-            if (heading) {
-                heading.insertAdjacentElement('afterend', fallbackEl);
+            if (heading && heading.parentElement) {
+                heading.parentElement.insertAdjacentElement('afterend', fallbackEl);
             } else {
                 table.parentNode.insertBefore(fallbackEl, table);
             }
@@ -324,7 +344,9 @@
             return;
         }
 
-        const totalCost = chartData.reduce((sum, item) => sum + item.cost, 0);
+        const includedCost = chartData.filter(i => i.kind.includes('Included')).reduce((sum, item) => sum + item.cost, 0);
+        const usageBasedCost = chartData.filter(i => i.kind.includes('Usage-based')).reduce((sum, item) => sum + item.cost, 0);
+
         const dates = chartData.map(item => item.time);
         const maxDate = dates[0];
         const minDate = dates[dates.length - 1];
@@ -339,7 +361,7 @@
             dateRangeStr = `${formatDate(minDate)} ${formatTime(minDate)} - ${formatDate(maxDate)} ${formatTime(maxDate)}`;
         }
 
-        const summaryText = `Total for visible range (${dateRangeStr}): $${totalCost.toFixed(2)}`;
+        const summaryText = `Total for visible range (${dateRangeStr}): Included Value $${includedCost.toFixed(2)} | Overage $${usageBasedCost.toFixed(2)}`;
 
         let summaryEl = document.getElementById(SUMMARY_ID);
         if (!summaryEl) {
@@ -355,8 +377,15 @@
             });
 
             const chartContainer = document.getElementById(CHART_ID);
+            const fallbackContainer = document.getElementById(FALLBACK_CHART_ID);
+            const heading = Array.from(document.querySelectorAll('p')).find(p => p.textContent.trim() === 'Filtered Usage Events');
+
             if (chartContainer) {
                 chartContainer.insertAdjacentElement('afterend', summaryEl);
+            } else if (fallbackContainer) {
+                fallbackContainer.insertAdjacentElement('afterend', summaryEl);
+            } else if (heading && heading.parentElement) {
+                heading.parentElement.insertAdjacentElement('afterend', summaryEl);
             } else {
                 table.parentNode.insertBefore(summaryEl, table);
             }
